@@ -6,7 +6,7 @@ import { validateAddress } from '@/lib/utils';
 import { track } from '@/lib/analytics';
 import { cn } from '@/lib/utils';
 import { FEATURED_DEMO_WALLETS } from '@/lib/mock/addresses';
-import { isDemoMode } from '@/lib/data';
+import { isDemoMode } from '@/lib/config/mode';
 
 /**
  * The main entry point of the product.

@@ -16,4 +16,4 @@ export const dataSource: DataSource =
 export const isDemoMode = dataSource.mode === 'demo';
 
 export type { DataSource, Page } from './types';
-export { NotConfiguredError } from './live-source';
+export { NotConfiguredError, ChainUnavailableError } from './errors';

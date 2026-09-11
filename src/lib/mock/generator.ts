@@ -1,18 +1,5 @@
-import type {
-  CemeteryStats,
-  Grave,
-  GraveyardEntry,
-  LivingEntry,
-  ResurrectedEntry,
-  RipTransaction,
-  SurvivalSession,
-  WalletProfile,
-} from '../domain/types';
-import { buildSessions } from '../domain/survival';
-import { causeOfDeathFor } from '../domain/causes';
-import { levelForSeconds } from '../domain/levels';
-import { computeAchievements } from '../domain/achievements';
-import { deriveState } from '../domain/survival';
+import type { RipTransaction } from '../domain/types';
+import { buildCemetery, type Cemetery } from '../domain/cemetery';
 import {
   DEMO_ALIVE,
   DEMO_DEAD,
@@ -245,165 +232,27 @@ function buildScripts(): WalletScript[] {
   return scripts;
 }
 
-export interface DemoDataset {
-  profiles: Map<string, WalletProfile>;
-  graves: GraveyardEntry[];
-  living: LivingEntry[];
-  resurrected: ResurrectedEntry[];
-  stats: CemeteryStats;
-  generatedAt: number;
-}
+export type DemoDataset = Cemetery;
 
 /**
  * Builds the entire demo cemetery.
  *
- * Grave numbers are assigned globally in the order wallets actually died,
- * which is exactly how the real database will number them.
+ * The lives, graves and listings are assembled by the SAME shared builder
+ * that live blockchain data uses, so demo mode is a faithful rehearsal of
+ * the real thing rather than a separate implementation.
  */
 export function generateDemoDataset(
   now: number = Math.floor(Date.now() / 1000),
 ): DemoDataset {
-  const scripts = buildScripts();
+  const transactionsByWallet = new Map<string, RipTransaction[]>();
 
-  // Pass 1 — rebuild every wallet's lives from its transactions.
-  const built = scripts.map((script) => {
-    const transactions = scriptToTransactions(script, now);
-    const history = buildSessions(script.address, transactions, now);
-    return { script, transactions, history };
-  });
-
-  // Pass 2 — number the graves globally, oldest death first.
-  const deadSessions: { address: string; session: SurvivalSession }[] = [];
-  for (const entry of built) {
-    for (const session of entry.history.sessions) {
-      if (!session.isActive && session.endedBy === 'SELL') {
-        deadSessions.push({ address: entry.script.address, session });
-      }
-    }
-  }
-  deadSessions.sort(
-    (a, b) => (a.session.endedAt ?? 0) - (b.session.endedAt ?? 0),
-  );
-
-  const graveNumbers = new Map<string, number>();
-  deadSessions.forEach((entry, i) => {
-    graveNumbers.set(entry.session.id, GRAVE_NUMBER_BASE + i + 1);
-  });
-
-  // Pass 3 — assemble the profiles.
-  const profiles = new Map<string, WalletProfile>();
-  const allGraves: GraveyardEntry[] = [];
-  const living: LivingEntry[] = [];
-  const resurrected: ResurrectedEntry[] = [];
-
-  for (const { script, transactions, history } of built) {
-    const { sessions, currentBalance, firstSeenAt, lastActivityAt } = history;
-
-    const graves: Grave[] = sessions
-      .filter((s) => !s.isActive && s.endedBy === 'SELL')
-      .map((session, index) => {
-        const graveNumber = graveNumbers.get(session.id) ?? index + 1;
-        const laterLife = sessions.some((s) => s.lifeNumber > session.lifeNumber);
-        return {
-          id: `${script.address}-grave-${graveNumber}`,
-          graveNumber,
-          walletAddress: script.address,
-          bornAt: session.startedAt,
-          diedAt: session.endedAt ?? session.startedAt,
-          lifespanSeconds: session.durationSeconds,
-          causeOfDeath: causeOfDeathFor(
-            script.address,
-            graveNumber,
-            session.durationSeconds,
-          ),
-          status: laterLife ? 'RESURRECTED' : 'BURIED',
-          resurrectionNumber: index,
-          createdAt: session.endedAt ?? session.startedAt,
-        } satisfies Grave;
-      });
-
-    const deaths = graves.length;
-    const active = sessions.find((s) => s.isActive) ?? null;
-    const state = deriveState(transactions.length, currentBalance, deaths);
-    const deathTimes = graves.map((g) => g.diedAt);
-    const resurrectionCount = sessions.filter((s) =>
-      deathTimes.some((t) => t <= s.startedAt),
-    ).length;
-
-    const profile: WalletProfile = {
-      address: script.address,
-      state,
-      isDemo: true,
-      currentBalance,
-      currentLifeSeconds: active ? active.durationSeconds : 0,
-      currentLifeStartedAt: active ? active.startedAt : null,
-      survivalLevel: active ? levelForSeconds(active.durationSeconds) : null,
-      totalLives: sessions.length,
-      deaths,
-      resurrections: resurrectionCount,
-      longestLifeSeconds: sessions.reduce(
-        (max, s) => Math.max(max, s.durationSeconds),
-        0,
-      ),
-      totalLifetimeSeconds: sessions.reduce(
-        (sum, s) => sum + s.durationSeconds,
-        0,
-      ),
-      firstSeenAt,
-      lastActivityAt,
-      transactions: [...transactions].sort((a, b) => b.timestamp - a.timestamp),
-      sessions,
-      graves,
-      achievements: [],
-    };
-    profile.achievements = computeAchievements(profile);
-    profiles.set(script.address.toLowerCase(), profile);
-
-    for (const grave of graves) {
-      allGraves.push({ ...grave, totalDeathsForWallet: deaths, isDemo: true });
-    }
-
-    if (active) {
-      living.push({
-        address: script.address,
-        balance: currentBalance,
-        holdingSeconds: active.durationSeconds,
-        level: levelForSeconds(active.durationSeconds),
-        transactionCount: transactions.length,
-        isDemo: true,
-      });
-    }
-
-    if (resurrectionCount > 0) {
-      resurrected.push({
-        address: script.address,
-        deaths,
-        resurrections: resurrectionCount,
-        currentState: state,
-        longestLifeSeconds: profile.longestLifeSeconds,
-        totalLifetimeSeconds: profile.totalLifetimeSeconds,
-        isDemo: true,
-      });
-    }
+  for (const script of buildScripts()) {
+    transactionsByWallet.set(script.address, scriptToTransactions(script, now));
   }
 
-  allGraves.sort((a, b) => b.diedAt - a.diedAt);
-
-  return {
-    profiles,
-    graves: allGraves,
-    living,
-    resurrected,
-    stats: {
-      totalGraves: allGraves.length,
-      totalLiving: living.length,
-      totalResurrected: resurrected.length,
-      longestLifeSeconds: Math.max(
-        0,
-        ...[...profiles.values()].map((p) => p.longestLifeSeconds),
-      ),
-      isDemo: true,
-    },
-    generatedAt: now,
-  };
+  return buildCemetery(transactionsByWallet, {
+    now,
+    isDemo: true,
+    graveNumberBase: GRAVE_NUMBER_BASE,
+  });
 }

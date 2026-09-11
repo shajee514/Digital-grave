@@ -1,4 +1,4 @@
-import { isDemoMode } from '@/lib/data';
+import { isDemoMode } from '@/lib/config/mode';
 import { isTokenConfigured } from '@/lib/config/contracts';
 
 /**

@@ -59,4 +59,27 @@ export const publicEnv = {
   discordUrl: str(process.env.NEXT_PUBLIC_DISCORD_URL),
 } as const;
 
+/**
+ * SERVER-ONLY settings. These are never sent to the browser.
+ * They control how much of the chain the site is willing to read directly.
+ */
+export const serverEnv = {
+  /** Block to start reading the token's history from (its deploy block). */
+  startBlock: num(process.env.INDEXER_START_BLOCK, 0),
+  /** How many blocks to request per `eth_getLogs` call. */
+  batchSize: num(process.env.INDEXER_BATCH_SIZE, 2000),
+  /**
+   * When no start block is configured, look back at most this many blocks
+   * from the chain tip rather than trying to read all of history.
+   */
+  lookbackBlocks: num(process.env.CHAIN_SCAN_LOOKBACK_BLOCKS, 200_000),
+  /** Hard safety limits so a busy token cannot hang the site. */
+  maxBlocks: num(process.env.CHAIN_SCAN_MAX_BLOCKS, 400_000),
+  maxLogs: num(process.env.CHAIN_SCAN_MAX_LOGS, 20_000),
+  /** How long a scan result is reused before reading the chain again. */
+  cacheTtlSeconds: num(process.env.CHAIN_CACHE_TTL_SECONDS, 60),
+  /** Overall time budget for one scan, in milliseconds. */
+  scanTimeoutMs: num(process.env.CHAIN_SCAN_TIMEOUT_MS, 20_000),
+};
+
 export const envHelpers = { str, num, bool };

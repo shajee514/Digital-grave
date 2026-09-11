@@ -8,14 +8,35 @@ import { contracts } from '@/lib/config/contracts';
 import { publicEnv } from '@/lib/config/env';
 import { explorerLink } from '@/lib/config/chain';
 import { site, socialLinks } from '@/lib/config/site';
+import { isLiveMode } from '@/lib/config/mode';
+import { getTokenInfo } from '@/lib/chain/token';
+import { formatAmount } from '@/lib/domain/format';
 
 export const metadata: Metadata = {
   title: 'Token',
   description: 'Official $RIP token information for Digital Grave on Robinhood Chain.',
 };
 
-export default function TokenPage() {
+/** Live token facts are read per request so supply stays current. */
+export const dynamic = 'force-dynamic';
+
+export default async function TokenPage() {
   const tokenExplorer = contracts.token ? explorerLink('token', contracts.token) : null;
+
+  /**
+   * Supply is read straight from the contract. If the chain cannot be
+   * reached we show the configuration notice rather than a stale or
+   * invented number.
+   */
+  let supply: { total: number; symbol: string } | null = null;
+  if (isLiveMode && contracts.token) {
+    try {
+      const info = await getTokenInfo();
+      supply = { total: info.totalSupply, symbol: info.symbol };
+    } catch {
+      supply = null;
+    }
+  }
 
   return (
     <Container className="py-12 sm:py-16">
@@ -88,12 +109,24 @@ export default function TokenPage() {
 
         <Panel>
           <h2 className="label-caps">Total Supply</h2>
-          <div className="mt-3">
-            <ConfigRequired
-              what="Supply is read directly from the token contract once its address is configured. We do not publish a number we cannot verify on chain."
-              envVar="NEXT_PUBLIC_RIP_TOKEN_ADDRESS"
-            />
-          </div>
+          {supply ? (
+            <>
+              <p className="mt-2 font-display text-xl font-bold">
+                {formatAmount(supply.total)}{' '}
+                <span className="text-base text-ash">${supply.symbol}</span>
+              </p>
+              <p className="mt-1 text-xs text-ash">
+                Read live from the token contract.
+              </p>
+            </>
+          ) : (
+            <div className="mt-3">
+              <ConfigRequired
+                what="Supply is read directly from the token contract once its address is configured and the chain is reachable. We do not publish a number we cannot verify on chain."
+                envVar="NEXT_PUBLIC_RIP_TOKEN_ADDRESS"
+              />
+            </div>
+          )}
         </Panel>
 
         <Panel>

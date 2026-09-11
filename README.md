@@ -49,14 +49,31 @@ Right now the site runs in **DEMO MODE**. Every wallet, grave and number you
 see is invented sample data, and a yellow banner says so at the top of every
 page. This lets you review the whole design before the token exists.
 
-When the token is live, change one line in `.env.local`:
+**Live mode is built and working.** To switch, put these in `.env.local`:
 
 ```
 NEXT_PUBLIC_DATA_MODE="live"
+NEXT_PUBLIC_RH_RPC_URL="<your Robinhood Chain RPC address>"
+NEXT_PUBLIC_RIP_TOKEN_ADDRESS="<your $RIP contract address>"
+INDEXER_START_BLOCK="<the block your token was created in>"
 ```
 
-The banner disappears and the site reads real blockchain data instead.
-(Live mode needs Phases 2–5 finished first — see below.)
+Then stop and restart `npm run dev`. The yellow banner disappears and every
+page — wallet search, graveyard, living wall, leaderboard — is built from
+real Transfer events read straight from the chain. **No database needed.**
+
+Strongly recommended, so buys and sells can be told apart from ordinary
+transfers:
+
+```
+NEXT_PUBLIC_RIP_PAIR_ADDRESS="<liquidity pair address>"
+NEXT_PUBLIC_RIP_ROUTER_ADDRESS="<DEX router address>"
+```
+
+Without them nothing is guessed — every movement is simply labelled a
+transfer.
+
+To put the site on the internet, see **[DEPLOY.md](DEPLOY.md)**.
 
 ---
 
@@ -126,14 +143,14 @@ was held. The same grave always shows the same cause, forever.
 | Phase | What | Status |
 | --- | --- | --- |
 | 1 | Full frontend with demo data | ✅ Done |
-| 2 | Supabase database | ⬜ Next |
-| 3 | Blockchain configuration | ⬜ |
-| 4 | The indexer | ⬜ |
-| 5 | Connect real $RIP data | ⬜ |
-| 6 | Wallet history engine | ⬜ |
-| 7 | Grave generation | ⬜ |
-| 8 | Leaderboard | ⬜ |
-| 9 | Sharing system | ⬜ |
+| 2 | Supabase database | ⬜ Only needed at large scale |
+| 3 | Blockchain configuration | ✅ Done |
+| 4 | The indexer | ⬜ Only needed at large scale |
+| 5 | Connect real $RIP data | ✅ Done (direct from chain) |
+| 6 | Wallet history engine | ✅ Done |
+| 7 | Grave generation | ✅ Done |
+| 8 | Leaderboard | ✅ Done |
+| 9 | Sharing system | ✅ Done |
 | 10 | Lucky Survivor architecture | ⬜ |
 | 11 | Security and performance | ⬜ |
 | 12 | Production deployment | ⬜ |

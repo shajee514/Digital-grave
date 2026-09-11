@@ -198,11 +198,17 @@ export function buildProfile(
    * A resurrection is a life that began AFTER the wallet had already died
    * at least once. Counting it this way means a wallet that simply moved
    * its tokens and came back is not credited with rising from the dead.
+   *
+   * Lives are walked in order rather than compared by timestamp, because a
+   * wallet that buys and sells inside a single block produces a life whose
+   * start, end and death time are all the same moment.
    */
-  const deathTimes = graves.map((g) => g.diedAt);
-  const resurrections = sessions.filter((s) =>
-    deathTimes.some((t) => t <= s.startedAt),
-  ).length;
+  let hasDied = false;
+  let resurrections = 0;
+  for (const session of sessions) {
+    if (hasDied) resurrections += 1;
+    if (!session.isActive && session.endedBy === 'SELL') hasDied = true;
+  }
 
   const longestLifeSeconds = sessions.reduce(
     (max, s) => Math.max(max, s.durationSeconds),
