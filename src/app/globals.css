@@ -1,0 +1,116 @@
+/* Brand fonts. Loaded here rather than as a <link> tag so Next.js can
+   optimise the stylesheet, with system fonts as the fallback. */
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-sans: 'Space Grotesk', system-ui, sans-serif;
+  --font-display: 'Space Grotesk', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  color-scheme: dark;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-void text-bone font-sans antialiased;
+    background-image:
+      radial-gradient(ellipse 80% 50% at 50% -10%, rgba(160, 107, 255, 0.10), transparent 60%),
+      radial-gradient(ellipse 60% 40% at 90% 10%, rgba(34, 224, 122, 0.05), transparent 60%);
+    background-attachment: fixed;
+    min-height: 100vh;
+  }
+
+  ::selection {
+    @apply bg-alive/30 text-bone;
+  }
+
+  :focus-visible {
+    @apply outline-none ring-2 ring-alive/70 ring-offset-2 ring-offset-void;
+  }
+
+  /* Respect users who prefer less motion. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer components {
+  /* A carved-stone panel — the core surface of the site. */
+  .stone-panel {
+    @apply relative rounded-2xl border border-moss/70 bg-stone/80 shadow-engraved backdrop-blur-sm;
+  }
+
+  .stone-panel-hover {
+    @apply transition-all duration-300 hover:border-moss hover:bg-granite/70 hover:-translate-y-0.5;
+  }
+
+  /* Small uppercase label above a value. */
+  .label-caps {
+    @apply text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-ash;
+  }
+
+  .value-xl {
+    @apply font-display text-3xl font-bold tracking-tight sm:text-4xl;
+  }
+
+  /* Engraved headline used on gravestones. */
+  .engraved {
+    text-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.07),
+      0 -1px 1px rgba(0, 0, 0, 0.9);
+  }
+
+  .grid-fog {
+    background-image:
+      linear-gradient(rgba(139, 139, 153, 0.06) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(139, 139, 153, 0.06) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, #000 20%, transparent 75%);
+  }
+
+  /* Loading skeleton shimmer. */
+  .skeleton {
+    @apply relative overflow-hidden rounded-md bg-granite;
+  }
+
+  .skeleton::after {
+    content: '';
+    @apply absolute inset-0 -translate-x-full animate-shimmer;
+    background-image: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.06),
+      transparent
+    );
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
